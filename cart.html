@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的购物车 - HK Market</title>
+    <!-- 外部资源（CDN加载，无本地依赖） -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    
+    <!-- Tailwind 配置（与项目保持一致） -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1E40AF', // 主蓝
+                        secondary: '#3B82F6', // 次蓝
+                        accent: '#F59E0B', // 橙色强调
+                        light: '#F9FAFB', // 浅灰背景
+                        dark: '#1F2937', // 深灰文本
+                        success: '#10B981', // 成功绿
+                        danger: '#EF4444', // 错误红
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'card': '0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04)',
+                        'btn': '0 4px 6px -1px rgba(30, 64, 175, 0.2)',
+                    }
+                },
+            }
+        }
+    </script>
+    
+    <!-- 自定义工具类 -->
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .input-focus {
+                @apply focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none;
+            }
+            .cart-item-hover {
+                @apply hover:bg-gray-50 transition-colors duration-300;
+            }
+            .text-gradient {
+                @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary;
+            }
+        }
+    </style>
+    
+    <!-- 全局样式 -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        
+        /* 加载动画 */
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+        
+        .loader.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #F3F4F6;
+            border-top: 5px solid #1E40AF;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* 按钮波纹效果 */
+        .btn-ripple {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-ripple:after {
+            content: "";
+            background: rgba(255, 255, 255, 0.2);
+            position: absolute;
+            border-radius: 50%;
+            transform: scale(0);
+            animation: ripple 0.6s linear;
+        }
+        
+        @keyframes ripple {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+        
+        /* 购物车数量输入框 */
+        .qty-input {
+            width: 40px;
+            height: 40px;
+            text-align: center;
+            border: 1px solid #E5E7EB;
+            border-radius: 6px;
+            outline: none;
+        }
+        
+        .qty-btn {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #E5E7EB;
+            border-radius: 6px;
+            background-color: #F9FAFB;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .qty-btn:hover {
+            background-color: #F3F4F6;
+            border-color: #D1D5DB;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 页面加载动画 -->
+    <div class="loader">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- 导航栏（与其他页面一致） -->
+    <header id="navbar" class="fixed w-full top-0 z-50 transition-all duration-300 bg-white/90 backdrop-blur-md shadow-sm">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16 md:h-20">
+                <!-- Logo -->
+                <a href="index.html" class="flex items-center space-x-2">
+                    <div class="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
+                        <i class="fa fa-shopping-bag text-white text-xl"></i>
+                    </div>
+                    <span class="text-xl md:text-2xl font-bold bg-gradient-to-r from-primary to-secondary text-gradient">HK Buddy</span>
+                </a>
+                
+                <!-- 桌面端导航 -->
+                <nav class="hidden md:flex items-center space-x-8">
+                    <a href="index.html#home" class="font-medium text-gray-600 hover:text-primary px-1 py-2 transition-colors">首页</a>
+                    <a href="browse.html" class="font-medium text-gray-600 hover:text-primary px-1 py-2 transition-colors">分类</a>
+                    <a href="index.html#featured" class="font-medium text-gray-600 hover:text-primary px-1 py-2 transition-colors">精选商品</a>
+                    <a href="services.html" class="font-medium text-gray-600 hover:text-primary px-1 py-2 transition-colors">特色服务</a>
+                    <a href="index.html#about" class="font-medium text-gray-600 hover:text-primary px-1 py-2 transition-colors">关于我们</a>
+                </nav>
+                
+                <!-- 操作按钮 -->
+                <div class="flex items-center space-x-3">
+                    <a href="search.html" class="p-2 text-gray-600 hover:text-primary hover:bg-gray-100 rounded-full transition-all">
+                        <i class="fa fa-search text-lg"></i>
+                    </a>
+                    <a href="cart.html" class="p-2 text-primary hover:bg-gray-100 rounded-full transition-all relative">
+                        <i class="fa fa-shopping-cart text-lg"></i>
+                        <span class="absolute -top-1 -right-1 w-5 h-5 bg-primary text-white text-xs rounded-full flex items-center justify-center" id="cart-count">3</span>
+                    </a>
+                    <a href="profile.html" class="hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors">
+                        <i class="fa fa-user"></i>
+                    </a>
+                    <a href="login.html" class="hidden sm:inline-block px-4 py-2 text-primary font-medium hover:text-secondary transition-colors">登录</a>
+                    <a href="sell.html" class="px-4 py-2 bg-accent text-white font-medium rounded-lg shadow-btn hover:bg-accent/90 btn-ripple transition-all">
+                        <i class="fa fa-plus mr-1"></i> 发布
+                    </a>
+                    
+                    <!-- 移动端菜单按钮 -->
+                    <button id="menu-toggle" class="md:hidden p-2 text-gray-600 hover:text-primary hover:bg-gray-100 rounded-full transition-all">
+                        <i class="fa fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 移动端导航菜单 -->
+        <div id="mobile-menu" class="md:hidden hidden bg-white border-t">
+            <div class="container mx-auto px-4 py-3 space-y-3">
+                <a href="index.html#home" class="block font-medium text-gray-600 hover:text-primary px-1 py-2">首页</a>
+                <a href="browse.html" class="block font-medium text-gray-600 hover:text-primary px-1 py-2">分类</a>
+                <a href="index.html#featured" class="block font-medium text-gray-600 hover:text-primary px-1 py-2">精选商品</a>
+                <a href="services.html" class="block font-medium text-gray-600 hover:text-primary px-1 py-2">特色服务</a>
+                <a href="index.html#about" class="block font-medium text-gray-600 hover:text-primary px-1 py-2">关于我们</a>
+                <a href="cart.html" class="block font-medium text-primary px-1 py-2 flex items-center">
+                    <i class="fa fa-shopping-cart mr-2"></i> 购物车 (3)
+                </a>
+                <a href="profile.html" class="block font-medium text-gray-600 hover:text-primary px-1 py-2 flex items-center">
+                    <i class="fa fa-user mr-2"></i> 个人中心
+                </a>
+                <a href="login.html" class="block font-medium text-primary px-1 py-2">登录</a>
+                <a href="sell.html" class="block font-medium bg-accent text-white px-4 py-2 rounded-lg text-center">
+                    <i class="fa fa-plus mr-1"></i> 发布商品
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- 购物车主页内容 -->
+    <main class="pt-16 md:pt-20 pb-16">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- 页面标题与面包屑 -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between py-6 border-b border-gray-200">
+                <div>
+                    <h1 class="text-[clamp(1.5rem,3vw,2rem)] font-bold text-dark">我的购物车</h1>
+                    <p class="text-gray-500 mt-1">已选择 <span id="selected-count" class="text-primary font-medium">3</span> 件商品，共 <span id="total-items" class="text-primary font-medium">3</span> 件</p>
+                </div>
+                <div class="mt-4 md:mt-0">
+                    <div class="flex items-center text-sm text-gray-600">
+                        <a href="index.html" class="hover:text-primary transition-colors">首页</a>
+                        <i class="fa fa-angle-right mx-2 text-gray-400"></i>
+                        <span class="text-gray-900">购物车</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 购物车主体布局 -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+                <!-- 购物车商品列表 -->
+                <div class="lg:col-span-2">
+                    <div class="bg-white rounded-2xl shadow-card overflow-hidden">
+                        <!-- 购物车表头 -->
+                        <div class="hidden lg:grid grid-cols-12 p-6 border-b border-gray-100 font-medium text-gray-500">
+                            <div class="col-span-1">选择</div>
+                            <div class="col-span-5">商品信息</div>
+                            <div class="col-span-2 text-center">单价</div>
+                            <div class="col-span-2 text-center">数量</div>
+                            <div class="col-span-1 text-center">小计</div>
+                            <div class="col-span-1 text-center">操作</div>
+                        </div>
+
+                        <!-- 购物车商品1（实物商品） -->
+                        <div class="cart-item p-6 border-b border-gray-100 cart-item-hover">
+                            <div class="lg:grid lg:grid-cols-12 lg:items-center gap-6">
+                                <!-- 选择框 -->
+                                <div class="flex items-start lg:col-span-1">
+                                    <input type="checkbox" class="cart-checkbox mt-1.5 text-primary focus:ring-primary" checked>
+                                </div>
+
+                                <!-- 商品信息 -->
+                                <div class="flex items-start lg:col-span-5">
+                                    <a href="product-detail.html" class="flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden mr-4">
+                                        <img src="images/products/apple-1282241_1920.jpg" alt="2023款 MacBook Air M2" class="w-full h-full object-cover">
+                                    </a>
+                                    <div class="flex-1 min-w-0">
+                                        <h3 class="font-medium text-gray-900 line-clamp-2">
+                                            <a href="product-detail.html" class="hover:text-primary transition-colors">2023款 MacBook Air M2 13.6英寸 8+256G</a>
+                                        </h3>
+                                        <p class="text-gray-500 text-sm mt-1 lg:hidden">星光色 | 99新</p>
+                                        <div class="hidden lg:block text-gray-500 text-sm mt-1">星光色 | 99新</div>
+                                        <div class="flex items-center mt-2 text-yellow-400 text-xs lg:hidden">
+                                            <i class="fa fa-star"></i>
+                                            <i class="fa fa-star"></i>
+                                            <i class="fa fa-star"></i>
+                                            <i class="fa fa-star"></i>
+                                            <i class="fa fa-star-half-o"></i>
+                                            <span class="ml-1 text-gray-600">(32 评价)</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 单价 -->
+                                <div class="mt-4 lg:mt-0 lg:col-span-2 text-center">
+                                    <span class="text-gray-900 font-medium">HK$ 7,800</span>
+                                    <span class="text-gray-500 text-sm line-through block mt-1 hidden lg:block">HK$ 9,999</span>
+                                </div>
+
+                                <!-- 数量调整 -->
+                                <div class="mt-4 lg:mt-0 lg:col-span-2 flex justify-start lg:justify-center">
+                                    <div class="flex items-center border border-gray-200 rounded-lg">
+                                        <button class="qty-btn decrease-qty" data-id="1">
+                                            <i class="fa fa-minus text-gray-600"></i>
+                                        </button>
+                                        <input type="number" class="qty-input" value="1" min="1" max="10" data-id="1">
+                                        <button class="qty-btn increase-qty" data-id="1">
+                                            <i class="fa fa-plus text-gray-600"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- 小计 -->
+                                <div class="mt-4 lg:mt-0 lg:col-span-1 text-center">
+                                    <span class="text-primary font-bold">HK$ 7,800</span>
+                                </div>
+
+                                <!-- 操作 -->
+                                <div class="mt-4 lg:mt-0 lg:col-span-1 flex justify-start lg:justify-center">
+                                    <button class="text-gray-500 hover:text-danger transition-colors delete-item" data-id="1">
+                                        <i class="fa fa-trash-o text-lg"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 购物车商品2（服务商品） -->
+                        <div class="cart-item p-6 border-b border-gray-100 cart-item-hover">
+                            <div class="lg:grid lg:grid-cols-12 lg:items-center gap-6">
+                                <!-- 选择框 -->
+                                <div class="flex items-start lg:col-span-1">
+                                    <input type="checkbox" class="cart-checkbox mt-1.5 text-primary focus:ring-primary" checked>
+                                </div>
+
+                                <!-- 商品信息 -->
+                                <div class="flex items-start lg:col-span-5">
+                                    <a href="service-detail.html" class="flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden mr-4 bg-primary/10 flex items-center justify-center">
+                                        <i class="fa fa-laptop text-primary text-2xl"></i>
+                                    </a>
+                                    <div class="flex-1 min-w-0">
+                                        <h3 class="font-medium text-gray-900 line-clamp-2">
+                                            <a href="service-detail.html" class="hover:text-primary transition-colors">MacBook 专业清洁保养服务</a>
+                                        </h3>
+                                        <p class="text-gray-500 text-sm mt-1 lg:hidden">深度清洁 + 系统优化</p>
+                                        <div class="hidden lg:block text-gray-500 text-sm mt-1">深度清洁 + 系统优化</div>
+                                        <div class="flex items-center mt-2 text-yellow-400 text-xs lg:hidden">
+                                            <i class="fa fa-star"></i>
+                                            <i class="fa fa-star"></i>
+                                            <i class="fa fa-star"></i>
+                                            <i class="fa fa-star"></i>
+                                            <i class="fa fa-star"></i>
+                                            <span class="ml-1 text-gray-600">(45 评价)</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 单价 -->
+                                <div class="mt-4 lg:mt-0 lg:col-span-2 text-center">
+                                    <span class="text-gray-900 font-medium">HK$ 280</span>
+                                </div>
+
+                                <!-- 数量调整 -->
+                                <div class="mt-4 lg:mt-0 lg:col-span-2 flex justify-start lg:justify-center">
+                                    <div class="flex items-center border border-gray-200 rounded-lg">
+                                        <button class="qty-btn decrease-qty" data-id="2">
+                                            <i class="fa fa-minus text-gray-600"></i>
+                                        </button>
+                                        <input type="number" class="qty-input" value="1" min="1" max="5" data-id="2">
+                                        <button class="qty-btn increase-qty" data-id="2">
+                                            <i class="fa fa-plus text-gray-600"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- 小计 -->
+                                <div class="mt-4 lg:mt-0 lg:col-span-1 text-center">
+                                    <span class="text-primary font-bold">HK$ 280</span>
+                                </div>
+
+                                <!-- 操作 -->
+                                <div class="mt-4 lg:mt-0 lg:col-span-1 flex justify-start lg:justify-center">
+                                    <button class="text-gray-500 hover:text-danger transition-colors delete-item" data-id="2">
+                                        <i class="fa fa-trash-o text-lg"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 购物车商品3（配件商品） -->
+                        <div class="cart-item p-6 cart-item-hover">
+                            <div class="lg:grid lg:grid-cols-12 lg:items-center gap-6">
+                                <!-- 选择框 -->
+                                <div class="flex items-start lg:col-span-1">
+                                    <input type="checkbox" class="cart-checkbox mt-1.5 text-primary focus:ring-primary" checked>
+                                </div>
+
+                                <!-- 商品信息 -->
+                                <div class="flex items-start lg:col-span-5">
+                                    <a href="product-detail.html" class="flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden mr-4">
+                                        <img src="images/products/21.jpg" alt="Apple AirPods Pro" class="w-full h-full object-cover">
+                                    </a>
+                                    <div class="flex-1 min-w-0">
+                                        <h3 class="font-medium text-gray-900 line-clamp-2">
+                                            <a href="product-detail.html" class="hover:text-primary transition-colors">Apple AirPods Pro 第二代 港版</a>
+                                        </h3>
+                                        <p class="text-gray-500 text-sm mt-1 lg:hidden">USB-C接口 | 全新未拆封</p>
+                                        <div class="hidden lg:block text-gray-500 text-sm mt-1">USB-C接口 | 全新未拆封</div>
+                                        <div class="flex items-center mt-2 text-yellow-400 text-xs lg:hidden">
+                                            <i class="fa fa-star"></i>
+                                            <i class="fa fa-star"></i>
+                                            <i class="fa fa-star"></i>
+                                            <i class="fa fa-star"></i>
+                                            <i class="fa fa-star-half-o"></i>
+                                            <span class="ml-1 text-gray-600">(28 评价)</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 单价 -->
+                                <div class="mt-4 lg:mt-0 lg:col-span-2 text-center">
+                                    <span class="text-gray-900 font-medium">HK$ 1,680</span>
+                                    <span class="text-gray-500 text-sm line-through block mt-1 hidden lg:block">HK$ 1,999</span>
+                                </div>
+
+                                <!-- 数量调整 -->
+                                <div class="mt-4 lg:mt-0 lg:col-span-2 flex justify-start lg:justify-center">
+                                    <div class="flex items-center border border-gray-200 rounded-lg">
+                                        <button class="qty-btn decrease-qty" data-id="3">
+                                            <i class="fa fa-minus text-gray-600"></i>
+                                        </button>
+                                        <input type="number" class="qty-input" value="1" min="1" max="3" data-id="3">
+                                        <button class="qty-btn increase-qty" data-id="3">
+                                            <i class="fa fa-plus text-gray-600"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- 小计 -->
+                                <div class="mt-4 lg:mt-0 lg:col-span-1 text-center">
+                                    <span class="text-primary font-bold">HK$ 1,680</span>
+                                </div>
+
+                                <!-- 操作 -->
+                                <div class="mt-4 lg:mt-0 lg:col-span-1 flex justify-start lg:justify-center">
+                                    <button class="text-gray-500 hover:text-danger transition-colors delete-item" data-id="3">
+                                        <i class="fa fa-trash-o text-lg"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 购物车操作区 -->
+                        <div class="p-6 flex flex-col sm:flex-row justify-between items-center">
+                            <div class="flex items-center space-x-4">
+                                <button id="select-all" class="flex items-center text-gray-700 hover:text-primary transition-colors">
+                                    <input type="checkbox" id="select-all-checkbox" class="mr-2 mt-1 text-primary focus:ring-primary" checked>
+                                    <span>全选</span>
+                                </button>
+                                <button id="delete-selected" class="text-gray-500 hover:text-danger transition-colors">
+                                    <i class="fa fa-trash-o mr-1"></i> 删除选中
+                                </button>
+                            </div>
+                            <div class="mt-4 sm:mt-0">
+                                <a href="browse.html" class="text-primary hover:text-secondary transition-colors flex items-center">
+                                    <i class="fa fa-arrow-left mr-1"></i> 继续购物
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 订单摘要 -->
+                <div class="lg:col-span-1">
+                    <div class="bg-white rounded-2xl shadow-card p-6 sticky top-24">
+                        <h2 class="text-lg font-bold text-gray-900 mb-6">订单摘要</h2>
+                        
+                        <div class="space-y-4 pb-6 border-b border-gray-100">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">商品总价</span>
+                                <span class="font-medium">HK$ 9,760</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">运费</span>
+                                <span class="text-success font-medium">免费</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">优惠券</span>
+                                <span class="text-primary font-medium">-HK$ 100</span>
+                            </div>
+                        </div>
+                        
+                        <div class="pt-6">
+                            <div class="flex justify-between mb-6">
+                                <span class="text-lg font-bold">实付金额</span>
+                                <span class="text-xl font-bold text-primary">HK$ 9,660</span>
+                            </div>
+                            
+                            <button class="w-full py-3 bg-primary text-white font-medium rounded-lg shadow-btn hover:bg-primary/90 btn-ripple transition-all mb-3">
+                                结算付款
+                            </button>
+                            
+                            <button class="w-full py-3 border border-primary text-primary font-medium rounded-lg hover:bg-primary/5 transition-all">
+                                <i class="fa fa-heart-o mr-2"></i> 加入收藏
+                            </button>
+                        </div>
+                        
+                        <div class="mt-6 pt-6 border-t border-gray-100">
+                            <div class="flex items-center text-sm text-gray-500">
+                                <i class="fa fa-shield text-primary mr-2"></i>
+                                <span>安全支付 · 正品保障 · 七天无理由退换</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 猜你喜欢 -->
+            <div class="mt-16">
+                <h2 class="text-xl font-bold text-gray-900 mb-6">猜你喜欢</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    <!-- 推荐商品1 -->
+                    <div class="bg-white rounded-xl shadow-card overflow-hidden hover:shadow-lg transition-shadow">
+                        <a href="product-detail.html" class="block">
+                            <div class="aspect-square overflow-hidden">
+                                <img src="images/products/3.jpeg" alt="iPhone 15 Pro" class="w-full h-full object-cover hover:scale-105 transition-transform duration-500">
+                            </div>
+                            <div class="p-4">
+                                <h3 class="font-medium text-gray-900 line-clamp-2 hover:text-primary transition-colors">iPhone 15 Pro 256GB 原色钛金属</h3>
+                                <div class="flex items-center mt-2 text-yellow-400 text-xs">
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star-half-o"></i>
+                                    <span class="ml-1 text-gray-600">(42)</span>
+                                </div>
+                                <div class="flex items-center justify-between mt-3">
+                                    <span class="text-primary font-bold">HK$ 8,999</span>
+                                    <span class="text-gray-500 text-sm line-through">HK$ 10,999</span>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    
+                    <!-- 推荐商品2 -->
+                    <div class="bg-white rounded-xl shadow-card overflow-hidden hover:shadow-lg transition-shadow">
+                        <a href="product-detail.html" class="block">
+                            <div class="aspect-square overflow-hidden">
+                                <img src="images/products/943f-hnstwwq5419991.jpg" alt="iPad Pro" class="w-full h-full object-cover hover:scale-105 transition-transform duration-500">
+                            </div>
+                            <div class="p-4">
+                                <h3 class="font-medium text-gray-900 line-clamp-2 hover:text-primary transition-colors">iPad Pro 11英寸 M4芯片 2024款</h3>
+                                <div class="flex items-center mt-2 text-yellow-400 text-xs">
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <span class="ml-1 text-gray-600">(28)</span>
+                                </div>
+                                <div class="flex items-center justify-between mt-3">
+                                    <span class="text-primary font-bold">HK$ 6,299</span>
+                                    <span class="text-gray-500 text-sm line-through">HK$ 7,999</span>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    
+                    <!-- 推荐商品3 -->
+                    <div class="bg-white rounded-xl shadow-card overflow-hidden hover:shadow-lg transition-shadow">
+                        <a href="product-detail.html" class="block">
+                            <div class="aspect-square overflow-hidden">
+                                <img src="images/products/2x.jpg" alt="Apple Watch Ultra 2" class="w-full h-full object-cover hover:scale-105 transition-transform duration-500">
+                            </div>
+                            <div class="p-4">
+                                <h3 class="font-medium text-gray-900 line-clamp-2 hover:text-primary transition-colors">Apple Watch Ultra 2 钛金属表壳</h3>
+                                <div class="flex items-center mt-2 text-yellow-400 text-xs">
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star-o"></i>
+                                    <span class="ml-1 text-gray-600">(19)</span>
+                                </div>
+                                <div class="flex items-center justify-between mt-3">
+                                    <span class="text-primary font-bold">HK$ 4,899</span>
+                                    <span class="text-gray-500 text-sm line-through">HK$ 5,899</span>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    
+                    <!-- 推荐商品4 -->
+                    <div class="bg-white rounded-xl shadow-card overflow-hidden hover:shadow-lg transition-shadow">
+                        <a href="service-detail.html" class="block">
+                            <div class="aspect-square overflow-hidden bg-primary/5 flex items-center justify-center">
+                                <i class="fa fa-headphones text-primary text-4xl"></i>
+                            </div>
+                            <div class="p-4">
+                                <h3 class="font-medium text-gray-900 line-clamp-2 hover:text-primary transition-colors">AirPods 专业维修服务</h3>
+                                <div class="flex items-center mt-2 text-yellow-400 text-xs">
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star-half-o"></i>
+                                    <span class="ml-1 text-gray-600">(35)</span>
+                                </div>
+                                <div class="flex items-center justify-between mt-3">
+                                    <span class="text-primary font-bold">HK$ 380</span>
+                                    <span class="text-gray-500 text-sm line-through">HK$ 480</span>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-dark text-white pt-16 pb-8">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div>
+                    <div class="flex items-center space-x-2 mb-6">
+                        <div class="w-10 h-10 rounded-lg bg-white flex items-center justify-center">
+                            <i class="fa fa-shopping-bag text-primary text-xl"></i>
+                        </div>
+                        <span class="text-xl font-bold">HK Market</span>
+                    </div>
+                    <p class="text-gray-400 mb-6">香港领先的电子产品交易平台，提供优质的二手设备和专业服务。</p>
+                    <div class="flex space-x-4">
+                        <a href="#" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-primary transition-colors">
+                            <i class="fa fa-facebook"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-primary transition-colors">
+                            <i class="fa fa-instagram"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-primary transition-colors">
+                            <i class="fa fa-twitter"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-primary transition-colors">
+                            <i class="fa fa-youtube-play"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-bold mb-6">快速链接</h3>
+                    <ul class="space-y-3">
+                        <li><a href="index.html#home" class="text-gray-400 hover:text-white transition-colors">首页</a></li>
+                        <li><a href="browse.html" class="text-gray-400 hover:text-white transition-colors">商品分类</a></li>
+                        <li><a href="index.html#featured" class="text-gray-400 hover:text-white transition-colors">精选商品</a></li>
+                        <li><a href="services.html" class="text-gray-400 hover:text-white transition-colors">特色服务</a></li>
+                        <li><a href="index.html#about" class="text-gray-400 hover:text-white transition-colors">关于我们</a></li>
+                        <li><a href="cart.html" class="text-gray-400 hover:text-white transition-colors">购物车</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-bold mb-6">客户服务</h3>
+                    <ul class="space-y-3">
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">帮助中心</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">联系我们</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">退换政策</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">隐私政策</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">用户协议</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">常见问题</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-bold mb-6">联系我们</h3>
+                    <ul class="space-y-3">
+                        <li class="flex items-start">
+                            <i class="fa fa-map-marker text-primary mt-1 mr-3"></i>
+                            <span class="text-gray-400">香港中环皇后大道中100号</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fa fa-phone text-primary mr-3"></i>
+                            <span class="text-gray-400">+852 1234 5678</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fa fa-envelope text-primary mr-3"></i>
+                            <span class="text-gray-400">info@hkbuddy.com</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fa fa-clock-o text-primary mr-3"></i>
+                            <span class="text-gray-400">周一至周日 10:00-20:00</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="border-t border-white/10 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
+                <p class="text-gray-400 text-sm">© 2025 HK Market. 保留所有权利。</p>
+                <div class="mt-4 md:mt-0">
+                    <img src="https://picsum.photos/id/237/200/40" alt="支付方式" class="h-8">
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // 页面加载完成后隐藏加载动画
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                document.querySelector('.loader').classList.add('hidden');
+            }, 500);
+        });
+
+        // 移动端菜单切换
+        document.getElementById('menu-toggle').addEventListener('click', function() {
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // 导航栏滚动效果
+        window.addEventListener('scroll', function() {
+            const navbar = document.getElementById('navbar');
+            if (window.scrollY > 50) {
+                navbar.classList.add('shadow-md');
+                navbar.classList.remove('shadow-sm');
+            } else {
+                navbar.classList.remove('shadow-md');
+                navbar.classList.add('shadow-sm');
+            }
+        });
+
+        // 按钮波纹效果
+        document.querySelectorAll('.btn-ripple').forEach(button => {
+            button.addEventListener('click', function(e) {
+                const x = e.clientX - e.target.getBoundingClientRect().left;
+                const y = e.clientY - e.target.getBoundingClientRect().top;
+                
+                const ripple = document.createElement('span');
+                ripple.style.width = ripple.style.height = Math.max(e.target.offsetWidth, e.target.offsetHeight) + 'px';
+                ripple.style.left = x - (parseInt(ripple.style.width) / 2) + 'px';
+                ripple.style.top = y - (parseInt(ripple.style.height) / 2) + 'px';
+                ripple.classList.add('ripple');
+                
+                this.appendChild(ripple);
+                
+                setTimeout(() => {
+                    ripple.remove();
+                }, 600);
+            });
+        });
+
+        // 购物车数量调整
+        document.querySelectorAll('.increase-qty').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const input = document.querySelector(`.qty-input[data-id="${this.dataset.id}"]`);
+                const max = parseInt(input.max);
+                if (parseInt(input.value) < max) {
+                    input.value = parseInt(input.value) + 1;
+                    updateCartTotal();
+                }
+            });
+        });
+
+        document.querySelectorAll('.decrease-qty').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const input = document.querySelector(`.qty-input[data-id="${this.dataset.id}"]`);
+                if (parseInt(input.value) > 1) {
+                    input.value = parseInt(input.value) - 1;
+                    updateCartTotal();
+                }
+            });
+        });
+
+        // 全选功能
+        document.getElementById('select-all-checkbox').addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('.cart-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateSelectedCount();
+        });
+
+        // 单个选择框变化
+        document.querySelectorAll('.cart-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                updateSelectedCount();
+                // 更新全选框状态
+                const allChecked = document.querySelectorAll('.cart-checkbox:checked').length === document.querySelectorAll('.cart-checkbox').length;
+                document.getElementById('select-all-checkbox').checked = allChecked;
+            });
+        });
+
+        // 删除商品
+        document.querySelectorAll('.delete-item').forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (confirm('确定要删除这个商品吗？')) {
+                    const cartItem = this.closest('.cart-item');
+                    cartItem.remove();
+                    updateCartTotal();
+                    updateSelectedCount();
+                }
+            });
+        });
+
+        // 删除选中商品
+        document.getElementById('delete-selected').addEventListener('click', function() {
+            if (confirm('确定要删除选中的商品吗？')) {
+                document.querySelectorAll('.cart-checkbox:checked').forEach(checkbox => {
+                    const cartItem = checkbox.closest('.cart-item');
+                    cartItem.remove();
+                });
+                updateCartTotal();
+                updateSelectedCount();
+            }
+        });
+
+        // 更新选中商品数量
+        function updateSelectedCount() {
+            const selectedCount = document.querySelectorAll('.cart-checkbox:checked').length;
+            const totalItems = document.querySelectorAll('.cart-item').length;
+            document.getElementById('selected-count').textContent = selectedCount;
+            document.getElementById('total-items').textContent = totalItems;
+            document.getElementById('cart-count').textContent = totalItems;
+        }
+
+        // 更新购物车总价（简化版）
+        function updateCartTotal() {
+            // 实际项目中应该重新计算所有商品的总价
+            // 这里只是演示，实际需要根据商品单价和数量计算
+        }
+    </script>
+</body>
+</html>

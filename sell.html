@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>发布商品 - HK Buddy</title>
+    <!-- 外部资源 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- 引入富文本编辑器（简化版，无需额外安装） -->
+    <script src="https://cdn.jsdelivr.net/npm/simplemde@1.11.2/dist/simplemde.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/simplemde@1.11.2/dist/simplemde.min.css">
+    
+    <!-- Tailwind 配置（与其他页面一致） -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1E40AF', // 主蓝
+                        secondary: '#3B82F6', // 次蓝
+                        accent: '#F59E0B', // 橙色强调
+                        light: '#F9FAFB', // 浅灰背景
+                        dark: '#1F2937', // 深灰文本
+                        success: '#10B981', // 成功绿
+                        danger: '#EF4444', // 错误红
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'card': '0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04)',
+                        'btn': '0 4px 6px -1px rgba(30, 64, 175, 0.2)',
+                    }
+                },
+            }
+        }
+    </script>
+    
+    <!-- 自定义工具类 -->
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .input-focus {
+                @apply focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none;
+            }
+            .upload-hover {
+                @apply hover:border-primary hover:bg-primary/5 transition-all;
+            }
+        }
+    </style>
+    
+    <!-- 全局样式 -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+        
+        /* 加载动画 */
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+        
+        .loader.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #F3F4F6;
+            border-top: 5px solid #1E40AF;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* 按钮波纹效果 */
+        .btn-ripple {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-ripple:after {
+            content: "";
+            background: rgba(255, 255, 255, 0.2);
+            position: absolute;
+            border-radius: 50%;
+            transform: scale(0);
+            animation: ripple 0.6s linear;
+        }
+        
+        @keyframes ripple {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+        
+        /* 图片上传预览 */
+        .upload-preview {
+            transition: all 0.3s ease;
+        }
+        
+        .upload-preview:hover {
+            transform: scale(1.03);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* 表单标签动画 */
+        .form-label {
+            transition: all 0.2s ease;
+        }
+        
+        input:focus ~ .form-label,
+        input:not(:placeholder-shown) ~ .form-label,
+        select:focus ~ .form-label,
+        select:not(:placeholder-shown) ~ .form-label,
+        textarea:focus ~ .form-label,
+        textarea:not(:placeholder-shown) ~ .form-label {
+            transform: translateY(-1.5rem) scale(0.85);
+            color: #1E40AF;
+        }
+
+        .text-gradient {
+            background: linear-gradient(to right, #1E40AF, #3B82F6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 页面加载动画 -->
+    <div class="loader">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- 导航栏（与其他页面一致） -->
+    <header id="navbar" class="fixed w-full top-0 z-50 transition-all duration-300 bg-white/90 backdrop-blur-md shadow-sm">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16 md:h-20">
+                <!-- Logo -->
+                <a href="index.html" class="flex items-center space-x-2">
+                    <div class="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
+                        <i class="fa fa-shopping-bag text-white text-xl"></i>
+                    </div>
+                    <span class="text-xl md:text-2xl font-bold bg-gradient-to-r from-primary to-secondary"
+                    style="background-clip: text; -webkit-background-clip: text; color: transparent;">
+                    HK Buddy</span>
+                </a>
+                
+                <!-- 桌面端导航 -->
+                <nav class="hidden md:flex items-center space-x-8">
+                    <a href="index.html#home" class="font-medium text-gray-600 hover:text-primary px-1 py-2 transition-colors">首页</a>
+                    <a href="browse.html" class="font-medium text-gray-600 hover:text-primary px-1 py-2 transition-colors">分类</a>
+                    <a href="index.html#featured" class="font-medium text-gray-600 hover:text-primary px-1 py-2 transition-colors">精选商品</a>
+                    <a href="index.html#services" class="font-medium text-gray-600 hover:text-primary px-1 py-2 transition-colors">特色服务</a>
+                    <a href="index.html#about" class="font-medium text-gray-600 hover:text-primary px-1 py-2 transition-colors">关于我们</a>
+                </nav>
+                
+                <!-- 操作按钮 -->
+                <div class="flex items-center space-x-3">
+                    <a href="search.html" class="p-2 text-gray-600 hover:text-primary hover:bg-gray-100 rounded-full transition-all">
+                        <i class="fa fa-search text-lg"></i>
+                    </a>
+                    <a href="cart.html" class="p-2 text-gray-600 hover:text-primary hover:bg-gray-100 rounded-full transition-all relative">
+                        <i class="fa fa-shopping-cart text-lg"></i>
+                        <span class="absolute -top-1 -right-1 w-5 h-5 bg-primary text-white text-xs rounded-full flex items-center justify-center">3</span>
+                    </a>
+                    <a href="profile.html" class="hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors">
+                        <i class="fa fa-user"></i>
+                    </a>
+                    <a href="login.html" class="hidden sm:inline-block px-4 py-2 text-primary font-medium hover:text-secondary transition-colors">登录</a>
+                    <a href="sell.html" class="px-4 py-2 bg-accent text-white font-medium rounded-lg shadow-btn hover:bg-accent/90 btn-ripple transition-all">
+                        <i class="fa fa-plus mr-1"></i> 发布
+                    </a>
+                    
+                    <!-- 移动端菜单按钮 -->
+                    <button id="menu-toggle" class="md:hidden p-2 text-gray-600 hover:text-primary hover:bg-gray-100 rounded-full transition-all">
+                        <i class="fa fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 移动端导航菜单 -->
+        <div id="mobile-menu" class="md:hidden hidden bg-white border-t">
+            <div class="container mx-auto px-4 py-3 space-y-3">
+                <a href="index.html#home" class="block font-medium text-gray-600 hover:text-primary px-1 py-2">首页</a>
+                <a href="browse.html" class="block font-medium text-gray-600 hover:text-primary px-1 py-2">分类</a>
+                <a href="index.html#featured" class="block font-medium text-gray-600 hover:text-primary px-1 py-2">精选商品</a>
+                <a href="index.html#services" class="block font-medium text-gray-600 hover:text-primary px-1 py-2">特色服务</a>
+                <a href="index.html#about" class="block font-medium text-gray-600 hover:text-primary px-1 py-2">关于我们</a>
+                <a href="cart.html" class="block font-medium text-gray-600 hover:text-primary px-1 py-2 flex items-center">
+                    <i class="fa fa-shopping-cart mr-2"></i> 购物车 (3)
+                </a>
+                <a href="profile.html" class="block font-medium text-gray-600 hover:text-primary px-1 py-2 flex items-center">
+                    <i class="fa fa-user mr-2"></i> 个人中心
+                </a>
+                <a href="login.html" class="block font-medium text-primary px-1 py-2">登录</a>
+                <a href="sell.html" class="block font-medium bg-accent text-white px-4 py-2 rounded-lg text-center">
+                    <i class="fa fa-plus mr-1"></i> 发布商品
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="pt-16 md:pt-20 pb-16">
+        <!-- 页面标题 -->
+        <section class="py-6 bg-white border-b border-gray-200">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex flex-col md:flex-row md:items-center justify-between">
+                    <div>
+                        <h1 class="text-[clamp(1.5rem,3vw,2rem)] font-bold text-dark">发布商品</h1>
+                        <p class="text-gray-500 mt-1">填写商品信息，快速发布到平台</p>
+                    </div>
+                    <div class="mt-4 md:mt-0 flex items-center gap-3">
+                        <button class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                            <i class="fa fa-save mr-1"></i> 保存草稿
+                        </button>
+                        <button class="px-4 py-2 bg-primary text-white font-medium rounded-lg shadow-btn hover:bg-primary/90 btn-ripple transition-all">
+                            <i class="fa fa-check mr-1"></i> 确认发布
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 发布商品表单 -->
+        <section class="py-8 md:py-12">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="bg-white rounded-2xl shadow-card p-6 md:p-8">
+                    <form id="sell-form" class="space-y-8">
+                        <!-- 第一步：基本信息 -->
+                        <div class="border-b border-gray-200 pb-8">
+                            <h2 class="text-lg font-bold text-dark mb-6 flex items-center">
+                                <span class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center mr-3 text-sm">1</span>
+                                基本信息
+                            </h2>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- 商品分类 -->
+                                <div class="relative">
+                                    <select id="category" class="w-full px-4 py-3 rounded-lg border border-gray-300 input-focus peer bg-gray-50">
+                                        <option value="" disabled selected>选择商品分类</option>
+                                        <option value="electronic">电子产品</option>
+                                        <option value="book">书籍资料</option>
+                                        <option value="clothes">服饰鞋包</option>
+                                        <option value="life">生活用品</option>
+                                        <option value="home">家居家电</option>
+                                        <option value="other">其他商品</option>
+                                    </select>
+                                    <label for="category" class="form-label absolute left-4 top-3 text-gray-500 peer-placeholder-shown:text-base peer-placeholder-shown:top-3 peer-focus:text-sm peer-focus:top-1">商品分类 <span class="text-danger">*</span></label>
+                                </div>
+                                
+                                <!-- 商品标题 -->
+                                <div class="relative">
+                                    <input type="text" id="title" placeholder=" " class="w-full px-4 py-3 rounded-lg border border-gray-300 input-focus peer bg-gray-50" required>
+                                    <label for="title" class="form-label absolute left-4 top-3 text-gray-500 peer-placeholder-shown:text-base peer-placeholder-shown:top-3 peer-focus:text-sm peer-focus:top-1">商品标题 <span class="text-danger">*</span></label>
+                                    <p class="text-xs text-gray-500 mt-1">请填写清晰的商品名称（如：无线蓝牙耳机 主动降噪 99新）</p>
+                                </div>
+                                
+                                <!-- 商品价格 -->
+                                <div class="relative">
+                                    <input type="number" id="price" placeholder=" " class="w-full px-4 py-3 rounded-lg border border-gray-300 input-focus peer bg-gray-50" min="0" step="0.01" required>
+                                    <label for="price" class="form-label absolute left-4 top-3 text-gray-500 peer-placeholder-shown:text-base peer-placeholder-shown:top-3 peer-focus:text-sm peer-focus:top-1">售价 (HK$) <span class="text-danger">*</span></label>
+                                    <span class="absolute right-4 top-3 text-gray-500">港币</span>
+                                </div>
+                                
+                                <!-- 商品库存 -->
+                                <div class="relative">
+                                    <input type="number" id="stock" placeholder=" " class="w-full px-4 py-3 rounded-lg border border-gray-300 input-focus peer bg-gray-50" min="1" value="1" required>
+                                    <label for="stock" class="form-label absolute left-4 top-3 text-gray-500 peer-placeholder-shown:text-base peer-placeholder-shown:top-3 peer-focus:text-sm peer-focus:top-1">库存数量 <span class="text-danger">*</span></label>
+                                    <p class="text-xs text-gray-500 mt-1">默认为1件，多件商品请填写实际库存</p>
+                                </div>
+                                
+                                <!-- 商品成色 -->
+                                <div class="relative">
+                                    <select id="condition" class="w-full px-4 py-3 rounded-lg border border-gray-300 input-focus peer bg-gray-50" required>
+                                        <option value="" disabled selected>选择商品成色</option>
+                                        <option value="new">全新未拆封</option>
+                                        <option value="like-new">99新（几乎全新）</option>
+                                        <option value="excellent">95新（成色极佳）</option>
+                                        <option value="good">9成新（轻微使用痕迹）</option>
+                                        <option value="normal">8成新（正常使用痕迹）</option>
+                                    </select>
+                                    <label for="condition" class="form-label absolute left-4 top-3 text-gray-500 peer-placeholder-shown:text-base peer-placeholder-shown:top-3 peer-focus:text-sm peer-focus:top-1">商品成色 <span class="text-danger">*</span></label>
+                                </div>
+                                
+                                <!-- 交易方式 -->
+                                <div>
+                                    <label class="block text-gray-700 font-medium mb-3">交易方式 <span class="text-danger">*</span></label>
+                                    <div class="flex flex-wrap gap-3">
+                                        <label class="flex items-center space-x-2 cursor-pointer">
+                                            <input type="checkbox" name="trade-type" value="meet" class="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary" checked>
+                                            <span class="text-gray-700">面交</span>
+                                        </label>
+                                        <label class="flex items-center space-x-2 cursor-pointer">
+                                            <input type="checkbox" name="trade-type" value="delivery" class="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary" checked>
+                                            <span class="text-gray-700">邮寄</span>
+                                        </label>
+                                        <label class="flex items-center space-x-2 cursor-pointer">
+                                            <input type="checkbox" name="trade-type" value="express" class="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary">
+                                            <span class="text-gray-700">同城速运</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 第二步：商品图片 -->
+                        <div class="border-b border-gray-200 pb-8">
+                            <h2 class="text-lg font-bold text-dark mb-6 flex items-center">
+                                <span class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center mr-3 text-sm">2</span>
+                                商品图片
+                            </h2>
+                            
+                            <p class="text-gray-600 mb-4">上传清晰的商品图片（主图必填，最多上传6张），图片将影响商品曝光率</p>
+                            
+                            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                                <!-- 主图上传 -->
+                                <div class="relative group">
+                                    <div class="upload-box w-full aspect-square rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center upload-hover cursor-pointer">
+                                        <input type="file" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" id="main-image">
+                                        <i class="fa fa-camera text-2xl text-gray-400 mb-2"></i>
+                                        <span class="text-sm text-gray-500 text-center">主图（必填）</span>
+                                    </div>
+                                    <!-- 图片预览（默认隐藏） -->
+                                    <div id="main-image-preview" class="hidden absolute inset-0 w-full h-full rounded-xl overflow-hidden upload-preview">
+                                        <img src="" alt="主图预览" class="w-full h-full object-cover">
+                                        <button class="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors">
+                                            <i class="fa fa-times text-xs"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- 副图上传（5个） -->
+                                <div class="relative group" id="sub-image-1">
+                                    <div class="upload-box w-full aspect-square rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center upload-hover cursor-pointer">
+                                        <input type="file" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer sub-image-input">
+                                        <i class="fa fa-image text-2xl text-gray-400 mb-2"></i>
+                                        <span class="text-sm text-gray-500 text-center">副图1</span>
+                                    </div>
+                                    <div class="sub-image-preview hidden absolute inset-0 w-full h-full rounded-xl overflow-hidden upload-preview">
+                                        <img src="" alt="副图预览" class="w-full h-full object-cover">
+                                        <button class="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors">
+                                            <i class="fa fa-times text-xs"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="relative group" id="sub-image-2">
+                                    <div class="upload-box w-full aspect-square rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center upload-hover cursor-pointer">
+                                        <input type="file" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer sub-image-input">
+                                        <i class="fa fa-image text-2xl text-gray-400 mb-2"></i>
+                                        <span class="text-sm text-gray-500 text-center">副图2</span>
+                                    </div>
+                                    <div class="sub-image-preview hidden absolute inset-0 w-full h-full rounded-xl overflow-hidden upload-preview">
+                                        <img src="" alt="副图预览" class="w-full h-full object-cover">
+                                        <button class="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors">
+                                            <i class="fa fa-times text-xs"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="relative group" id="sub-image-3">
+                                    <div class="upload-box w-full aspect-square rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center upload-hover cursor-pointer">
+                                        <input type="file" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer sub-image-input">
+                                        <i class="fa fa-image text-2xl text-gray-400 mb-2"></i>
+                                        <span class="text-sm text-gray-500 text-center">副图3</span>
+                                    </div>
+                                    <div class="sub-image-preview hidden absolute inset-0 w-full h-full rounded-xl overflow-hidden upload-preview">
+                                        <img src="" alt="副图预览" class="w-full h-full object-cover">
+                                        <button class="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors">
+                                            <i class="fa fa-times text-xs"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="relative group" id="sub-image-4">
+                                    <div class="upload-box w-full aspect-square rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center upload-hover cursor-pointer">
+                                        <input type="file" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer sub-image-input">
+                                        <i class="fa fa-image text-2xl text-gray-400 mb-2"></i>
+                                        <span class="text-sm text-gray-500 text-center">副图4</span>
+                                    </div>
+                                    <div class="sub-image-preview hidden absolute inset-0 w-full h-full rounded-xl overflow-hidden upload-preview">
+                                        <img src="" alt="副图预览" class="w-full h-full object-cover">
+                                        <button class="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors">
+                                            <i class="fa fa-times text-xs"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="relative group" id="sub-image-5">
+                                    <div class="upload-box w-full aspect-square rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center upload-hover cursor-pointer">
+                                        <input type="file" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer sub-image-input">
+                                        <i class="fa fa-image text-2xl text-gray-400 mb-2"></i>
+                                        <span class="text-sm text-gray-500 text-center">副图5</span>
+                                    </div>
+                                    <div class="sub-image-preview hidden absolute inset-0 w-full h-full rounded-xl overflow-hidden upload-preview">
+                                        <img src="" alt="副图预览" class="w-full h-full object-cover">
+                                        <button class="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors">
+                                            <i class="fa fa-times text-xs"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <p class="text-xs text-gray-500 mt-3">
+                                <i class="fa fa-info-circle text-primary mr-1"></i>
+                                建议图片尺寸：800×800像素以上，大小不超过5MB，支持JPG、PNG格式
+                            </p>
+                        </div>
+                        
+                        <!-- 第三步：商品详情 -->
+                        <div class="border-b border-gray-200 pb-8">
+                            <h2 class="text-lg font-bold text-dark mb-6 flex items-center">
+                                <span class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center mr-3 text-sm">3</span>
+                                商品详情
+                            </h2>
+                            
+                            <div class="space-y-6">
+                                <!-- 商品简介 -->
+                                <div class="relative">
+                                    <textarea id="summary" placeholder=" " class="w-full px-4 py-3 rounded-lg border border-gray-300 input-focus peer bg-gray-50 h-24 resize-none" required></textarea>
+                                    <label for="summary" class="form-label absolute left-4 top-3 text-gray-500 peer-placeholder-shown:text-base peer-placeholder-shown:top-3 peer-focus:text-sm peer-focus:top-1">商品简介 <span class="text-danger">*</span></label>
+                                    <p class="text-xs text-gray-500 mt-1">简要描述商品核心卖点（如：全新未拆封、配件齐全、使用1个月等），不超过150字</p>
+                                </div>
+                                
+                                <!-- 商品详情（富文本编辑器） -->
+                                <div>
+                                    <label for="detail" class="block text-gray-700 font-medium mb-3">详细描述 <span class="text-danger">*</span></label>
+                                    <p class="text-xs text-gray-500 mb-3">
+                                        详细描述商品信息（如：购买时间、使用情况、配件清单、保修情况等），信息越详细，成交率越高
+                                    </p>
+                                    <textarea id="detail" class="w-full rounded-lg border border-gray-300 input-focus bg-gray-50" rows="10" required>
+### 商品介绍
+- 购买时间：2025年1月
+- 使用时长：3个月
+- 商品状态：99新，无划痕无破损
+- 配件清单：主机×1、充电线×1、包装盒×1、保修卡×1
+
+### 功能说明
+- 支持主动降噪，降噪深度40dB
+- 单次续航6小时，充电盒续航24小时
+- 蓝牙5.3连接，稳定无断连
+- IP54级防尘防水
+
+### 交易说明
+- 支持香港岛/九龙面交，具体地点可协商
+- 邮寄运费自理，默认顺丰到付
+- 商品一经售出，非质量问题不退不换
+                                    </textarea>
+                                </div>
+                                
+                                <!-- 标签添加 -->
+                                <div>
+                                    <label class="block text-gray-700 font-medium mb-3">商品标签</label>
+                                    <div class="flex flex-wrap gap-2">
+                                        <div class="relative flex-1 min-w-[200px]">
+                                            <input type="text" id="tag-input" placeholder="输入标签（回车添加）" class="w-full px-4 py-2 rounded-lg border border-gray-300 input-focus bg-gray-50">
+                                        </div>
+                                        <div id="tags-container" class="flex flex-wrap gap-2 mt-2">
+                                            <!-- 动态添加标签 -->
+                                            <span class="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm">
+                                                电子产品 <button class="ml-1 text-primary/70 hover:text-primary"><i class="fa fa-times"></i></button>
+                                            </span>
+                                            <span class="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm">
+                                                耳机 <button class="ml-1 text-primary/70 hover:text-primary"><i class="fa fa-times"></i></button>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-2">最多添加5个标签，每个标签不超过8字，标签将提升商品搜索曝光</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 第四步：物流与售后 -->
+                        <div>
+                            <h2 class="text-lg font-bold text-dark mb-6 flex items-center">
+                                <span class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center mr-3 text-sm">4</span>
+                                物流与售后
+                            </h2>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- 面交地点 -->
+                                <div>
+                                    <label for="meet-location" class="block text-gray-700 font-medium mb-3">面交地点（可选）</label>
+                                    <input type="text" id="meet-location" placeholder="如：香港大学、铜锣湾地铁站" class="w-full px-4 py-3 rounded-lg border border-gray-300 input-focus bg-gray-50">
+                                    <p class="text-xs text-gray-500 mt-1">填写常去的地点，方便买家联系</p>
+                                </div>
+                                
+                                <!-- 邮寄运费 -->
+                                <div class="relative">
+                                    <select id="shipping-fee" class="w-full px-4 py-3 rounded-lg border border-gray-300 input-focus peer bg-gray-50">
+                                        <option value="free">包邮（卖家承担运费）</option>
+                                        <option value="paid" selected>到付（买家承担运费）</option>
+                                        <option value="fixed">固定运费</option>
+                                    </select>
+                                    <label for="shipping-fee" class="form-label absolute left-4 top-3 text-gray-500 peer-placeholder-shown:text-base peer-placeholder-shown:top-3 peer-focus:text-sm peer-focus:top-1">邮寄运费</label>
+                                </div>
+                                
+                                <!-- 固定运费金额（默认隐藏） -->
+                                <div id="fixed-fee-input" class="hidden relative md:col-span-2">
+                                    <input type="number" placeholder=" " class="w-full px-4 py-3 rounded-lg border border-gray-300 input-focus peer bg-gray-50" min="0" step="0.01">
+                                    <label class="form-label absolute left-4 top-3 text-gray-500 peer-placeholder-shown:text-base peer-placeholder-shown:top-3 peer-focus:text-sm peer-focus:top-1">固定运费金额 (HK$)</label>
+                                    <span class="absolute right-4 top-3 text-gray-500">港币</span>
+                                </div>
+                                
+                                <!-- 售后政策 -->
+                                <div class="md:col-span-2">
+                                    <label class="block text-gray-700 font-medium mb-3">售后政策</label>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <label class="flex items-center space-x-2 cursor-pointer">
+                                            <input type="radio" name="after-sales" value="no-refund" class="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary" checked>
+                                            <span class="text-gray-700">一经售出，不退不换</span>
+                                        </label>
+                                        <label class="flex items-center space-x-2 cursor-pointer">
+                                            <input type="radio" name="after-sales" value="7days" class="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary">
+                                            <span class="text-gray-700">支持7天无理由退换</span>
+                                        </label>
+                                        <label class="flex items-center space-x-2 cursor-pointer">
+                                            <input type="radio" name="after-sales" value="quality" class="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary">
+                                            <span class="text-gray-700">质量问题可退换</span>
+                                        </label>
+                                        <label class="flex items-center space-x-2 cursor-pointer">
+                                            <input type="radio" name="after-sales" value="custom" class="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary">
+                                            <span class="text-gray-700">自定义售后政策</span>
+                                        </label>
+                                    </div>
+                                    
+                                    <!-- 自定义售后政策（默认隐藏） -->
+                                    <div id="custom-after-sales" class="hidden mt-3">
+                                        <textarea class="w-full px-4 py-3 rounded-lg border border-gray-300 input-focus bg-gray-50 h-20 resize-none" placeholder="请详细说明你的售后政策"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 提交按钮 -->
+                        <div class="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4">
+                            <div class="flex items-center">
+                                <input type="checkbox" id="agreement" class="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary" required>
+                                <label for="agreement" class="ml-2 text-gray-700 text-sm">
+                                    我已阅读并同意 <a href="terms.html" class="text-primary hover:underline">《卖家用户协议》</a> 和 <a href="privacy.html" class="text-primary hover:underline">《隐私政策》</a>
+                                </label>
+                            </div>
+                            
+                            <div class="flex gap-3">
+                                <button type="button" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                                    <i class="fa fa-save mr-1"></i> 保存草稿
+                                </button>
+                                <button type="submit" class="px-6 py-3 bg-primary text-white font-medium rounded-lg shadow-btn hover:bg-primary/90 btn-ripple transition-all">
+                                    <i class="fa fa-check mr-1"></i> 确认发布
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚（与其他页面一致） -->
+    <footer class="bg-dark text-white pt-16 pb-8">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+                <div>
+                    <div class="flex items-center space-x-2 mb-6">
+                        <div class="w-10 h-10 rounded-lg bg-white flex items-center justify-center">
+                            <i class="fa fa-shopping-bag text-primary text-xl"></i>
+                        </div>
+                        <span class="text-xl font-bold">HK Buddy</span>
+                    </div>
+                    <p class="text-gray-400 mb-6">
+                        香港留学生的一站式交易平台，让留学生活更便捷、更省钱、更精彩。
+                    </p>
+                    <div class="flex space-x-4">
+                        <a href="#" class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 hover:bg-primary hover:text-white transition-all">
+                            <i class="fa fa-facebook"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 hover:bg-primary hover:text-white transition-all">
+                            <i class="fa fa-instagram"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 hover:bg-primary hover:text-white transition-all">
+                            <i class="fa fa-wechat"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 hover:bg-primary hover:text-white transition-all">
+                            <i class="fa fa-linkedin"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-semibold mb-6">快速链接</h3>
+                    <ul class="space-y-3">
+                        <li><a href="index.html#home" class="text-gray-400 hover:text-white transition-colors">首页</a></li>
+                        <li><a href="browse.html" class="text-gray-400 hover:text-white transition-colors">商品分类</a></li>
+                        <li><a href="index.html#featured" class="text-gray-400 hover:text-white transition-colors">精选商品</a></li>
+                        <li><a href="index.html#services" class="text-gray-400 hover:text-white transition-colors">特色服务</a></li>
+                        <li><a href="about.html" class="text-gray-400 hover:text-white transition-colors">关于我们</a></li>
+                        <li><a href="contact.html" class="text-gray-400 hover:text-white transition-colors">联系我们</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-semibold mb-6">帮助中心</h3>
+                    <ul class="space-y-3">
+                        <li><a href="faq.html" class="text-gray-400 hover:text-white transition-colors">常见问题</a></li>
+                        <li><a href="terms.html" class="text-gray-400 hover:text-white transition-colors">服务条款</a></li>
+                        <li><a href="privacy.html" class="text-gray-400 hover:text-white transition-colors">隐私政策</a></li>
+                        <li><a href="safety.html" class="text-gray-400 hover:text-white transition-colors">交易安全</a></li>
+                        <li><a href="refund.html" class="text-gray-400 hover:text-white transition-colors">退款政策</a></li>
+                        <li><a href="report.html" class="text-gray-400 hover:text-white transition-colors">投诉举报</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-semibold mb-6">联系我们</h3>
+                    <ul class="space-y-3">
+                        <li class="flex items-start">
+                            <i class="fa fa-map-marker text-primary mt-1 mr-3"></i>
+                            <span class="text-gray-400">香港中环皇后大道中1号</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fa fa-envelope text-primary mr-3"></i>
+                            <span class="text-gray-400">support@hkbuddy.com</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fa fa-phone text-primary mr-3"></i>
+                            <span class="text-gray-400">+852 1234 5678</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fa fa-clock-o text-primary mr-3"></i>
+                            <span class="text-gray-400">周一至周日 9:00-21:00</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-800 pt-8">
+                <div class="flex flex-col md:flex-row justify-between items-center">
+                    <p class="text-gray-500 text-sm mb-4 md:mb-0">
+                        &copy; 2025 HK Buddy. 保留所有权利。
+                    </p>
+                    <div class="flex space-x-6">
+                        <a href="terms.html" class="text-gray-500 text-sm hover:text-gray-300 transition-colors">服务条款</a>
+                        <a href="privacy.html" class="text-gray-500 text-sm hover:text-gray-300 transition-colors">隐私政策</a>
+                        <a href="cookies.html" class="text-gray-500 text-sm hover:text-gray-300 transition-colors">Cookie 政策</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 回到顶部按钮 -->
+    <button id="back-to-top" class="fixed bottom-6 right-6 w-12 h-12 bg-primary text-white rounded-full shadow-lg flex items-center justify-center opacity-0 invisible transition-all duration-300 hover:bg-primary/90">
+        <i class="fa fa-arrow-up"></i>
+    </button>
+
+    <!-- JavaScript -->
+    <script>
+        // 页面加载动画
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                document.querySelector('.loader').classList.add('hidden');
+            }, 600);
+        });
+        
+        // 导航栏滚动效果
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', function() {
+            if (window.scrollY > 50) {
+                navbar.classList.add('shadow-md');
+            } else {
+                navbar.classList.remove('shadow-md');
+            }
+        });
+        
+        // 移动端菜单切换
+        const menuToggle = document.getElementById('menu-toggle');
+        const mobileMenu = document.getElementById('mobile-menu');
+        
+        menuToggle.addEventListener('click', function() {
+            mobileMenu.classList.toggle('hidden');
+            const icon = menuToggle.querySelector('i');
+            if (icon.classList.contains('fa-bars')) {
+                icon.classList.replace('fa-bars', 'fa-times');
+            } else {
+                icon.classList.replace('fa-times', 'fa-bars');
+            }
+        });
+        
+        // 回到顶部按钮
+        const backToTopBtn = document.getElementById('back-to-top');
+        
+        window.addEventListener('scroll', function() {
+            if (window.scrollY > 300) {
+                backToTopBtn.classList.remove('opacity-0', 'invisible');
+                backToTopBtn.classList.add('opacity-100', 'visible');
+            } else {
+                backToTopBtn.classList.add('opacity-0', 'invisible');
+                backToTopBtn.classList.remove('opacity-100', 'visible');
+            }
+        });
+        
+        backToTopBtn.addEventListener('click', function() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+        
+        // 按钮波纹效果
+        document.querySelectorAll('.btn-ripple').forEach(button => {
+            button.addEventListener('click', function(e) {
+                const x = e.clientX - e.target.getBoundingClientRect().left;
+                const y = e.clientY - e.target.getBoundingClientRect().top;
+                
+                const ripple = document.createElement('span');
+                ripple.style.width = ripple.style.height = Math.max(e.target.offsetWidth, e.target.offsetHeight) + 'px';
+                ripple.style.left = x - (parseInt(ripple.style.width) / 2) + 'px';
+                ripple.style.top = y - (parseInt(ripple.style.height) / 2) + 'px';
+                ripple.classList.add('ripple');
+                
+                const rippleOld = e.target.querySelector('.ripple');
+                if (rippleOld) rippleOld.remove();
+                
+                e.target.appendChild(ripple);
+            });
+        });
+        
+        // 富文本编辑器初始化
+        const simplemde = new SimpleMDE({
+            element: document.getElementById("detail"),
+            spellChecker: false,
+            toolbar: [
+                'bold', 'italic', 'heading', '|',
+                'unordered-list', 'ordered-list', '|',
+                'link', 'image', '|',
+                'preview', 'side-by-side', 'fullscreen', '|',
+                'guide'
+            ],
+            placeholder: '请详细描述商品信息...'
+        });
+        
+        // 图片上传预览功能
+        // 主图预览
+        const mainImageInput = document.getElementById('main-image');
+        const mainImagePreview = document.getElementById('main-image-preview');
+        const mainImagePreviewImg = mainImagePreview.querySelector('img');
+        const mainImageRemoveBtn = mainImagePreview.querySelector('button');
+        
+        mainImageInput.addEventListener('change', function(e) {
+            if (e.target.files && e.target.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    mainImagePreviewImg.src = e.target.result;
+                    mainImagePreview.classList.remove('hidden');
+                    mainImageInput.parentElement.classList.add('hidden');
+                }
+                reader.readAsDataURL(e.target.files[0]);
+            }
+        });
+        
+        mainImageRemoveBtn.addEventListener('click', function() {
+            mainImagePreview.classList.add('hidden');
+            mainImageInput.parentElement.classList.remove('hidden');
+            mainImageInput.value = '';
+        });
+        
+        // 副图预览（批量处理）
+        const subImageInputs = document.querySelectorAll('.sub-image-input');
+        
+        subImageInputs.forEach((input, index) => {
+            const parent = input.parentElement;
+            const preview = parent.nextElementSibling;
+            const previewImg = preview.querySelector('img');
+            const removeBtn = preview.querySelector('button');
+            
+            input.addEventListener('change', function(e) {
+                if (e.target.files && e.target.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        previewImg.src = e.target.result;
+                        preview.classList.remove('hidden');
+                        parent.classList.add('hidden');
+                    }
+                    reader.readAsDataURL(e.target.files[0]);
+                }
+            });
+            
+            removeBtn.addEventListener('click', function() {
+                preview.classList.add('hidden');
+                parent.classList.remove('hidden');
+                input.value = '';
+            });
+        });
+        
+        // 标签添加功能
+        const tagInput = document.getElementById('tag-input');
+        const tagsContainer = document.getElementById('tags-container');
+        
+        tagInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && this.value.trim() !== '') {
+                e.preventDefault();
+                const tagText = this.value.trim();
+                
+                // 限制标签数量（最多5个）
+                if (tagsContainer.children.length >= 5) {
+                    alert('最多只能添加5个标签');
+                    return;
+                }
+                
+                // 限制标签长度（最多8字）
+                if (tagText.length > 8) {
+                    alert('标签长度不能超过8个字');
+                    return;
+                }
+                
+                // 创建标签元素
+                const tag = document.createElement('span');
+                tag.className = 'inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm';
+                tag.innerHTML = `${tagText} <button class="ml-1 text-primary/70 hover:text-primary"><i class="fa fa-times"></i></button>`;
+                
+                // 添加删除功能
+                tag.querySelector('button').addEventListener('click', function() {
+                    tag.remove();
+                });
+                
+                // 添加到容器
+                tagsContainer.appendChild(tag);
+                this.value = '';
+            }
+        });
+        
+        // 已存在标签的删除功能
+        document.querySelectorAll('#tags-container button').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.parentElement.remove();
+            });
+        });
+        
+        // 运费选择逻辑
+        const shippingFeeSelect = document.getElementById('shipping-fee');
+        const fixedFeeInput = document.getElementById('fixed-fee-input');
+        
+        shippingFeeSelect.addEventListener('change', function() {
+            if (this.value === 'fixed') {
+                fixedFeeInput.classList.remove('hidden');
+            } else {
+                fixedFeeInput.classList.add('hidden');
+            }
+        });
+        
+        // 售后政策选择逻辑
+        const afterSalesRadios = document.querySelectorAll('input[name="after-sales"]');
+        const customAfterSales = document.getElementById('custom-after-sales');
+        
+        afterSalesRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.value === 'custom') {
+                    customAfterSales.classList.remove('hidden');
+                } else {
+                    customAfterSales.classList.add('hidden');
+                }
+            });
+        });
+        
+        // 表单提交处理
+        const sellForm = document.getElementById('sell-form');
+        
+        sellForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // 简单表单验证
+            const title = document.getElementById('title').value;
+            const price = document.getElementById('price').value;
+            const category = document.getElementById('category').value;
+            const condition = document.getElementById('condition').value;
+            const summary = document.getElementById('summary').value;
+            const agreement = document.getElementById('agreement').checked;
+            
+            if (!title || !price || !category || !condition || !summary) {
+                alert('请填写所有必填项');
+                return;
+            }
+            
+            if (!agreement) {
+                alert('请阅读并同意用户协议和隐私政策');
+                return;
+            }
+            
+            // 模拟提交成功
+            alert('商品发布成功！将在24小时内审核通过并上线');
+            window.location.href = 'profile.html#my-products';
+        });
+    </script>
+</body>
+</html>
